@@ -409,6 +409,17 @@ footer::before{content:'';position:absolute;bottom:0;left:0;right:0;height:200px
   .cal-day.has-events .cal-day-num::after{content:'•';color:var(--dawn-orange);margin-left:3px}
 }
 
+
+/* ════════════════════════════════════════
+   BUY MODAL
+════════════════════════════════════════ */
+.buy-item-info{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 18px;background:rgba(255,107,53,.07);border:1px solid rgba(255,107,53,.2);border-radius:var(--rsm);margin-bottom:20px}
+.buy-item-name{font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--text-primary)}
+.buy-item-cat{font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--dawn-orange);margin-top:2px}
+.buy-item-price{font-family:var(--fm);font-size:1.3rem;font-weight:700;color:var(--dawn-gold);white-space:nowrap}
+.buy-type-toggle{display:flex;gap:8px}
+.buy-type-btn{flex:1;padding:12px 8px;border-radius:var(--rsm);font-family:var(--fd);font-size:.78rem;font-weight:700;letter-spacing:.06em;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);color:var(--text-muted);cursor:pointer;transition:all var(--tf)}
+.buy-type-btn.active{background:rgba(255,107,53,.15);border-color:rgba(255,107,53,.4);color:var(--dawn-gold)}
 </style>
 </head>
 <body>
@@ -685,6 +696,40 @@ footer::before{content:'';position:absolute;bottom:0;left:0;right:0;height:200px
 </footer>
 
 <!-- ══════ UTILITY ══════ -->
+<!-- ══════ BUY MODAL ══════ -->
+<div id="buy-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-title">🛒 Complete Purchase</div>
+    <div class="buy-item-info">
+      <div>
+        <div class="buy-item-name" id="buy-item-name">—</div>
+        <div class="buy-item-cat" id="buy-item-cat"></div>
+      </div>
+      <div class="buy-item-price" id="buy-item-price">—</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Your Minecraft Username</label>
+      <input type="text" class="form-input" id="buy-username" maxlength="40" placeholder="YourUsername" autocomplete="off" />
+    </div>
+    <div class="form-group">
+      <label class="form-label">Purchase Type</label>
+      <div class="buy-type-toggle">
+        <button class="buy-type-btn active" data-type="personal">👤 Personal</button>
+        <button class="buy-type-btn" data-type="gift">🎁 Gift for a Friend</button>
+      </div>
+    </div>
+    <div class="form-group hidden" id="buy-gift-group">
+      <label class="form-label">Recipient's Minecraft Username</label>
+      <input type="text" class="form-input" id="buy-recipient" maxlength="40" placeholder="FriendUsername" autocomplete="off" />
+    </div>
+    <div class="form-error hidden" id="buy-error"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="buy-cancel-btn">Cancel</button>
+      <button class="btn btn-primary" id="buy-submit-btn">⚡ Confirm Purchase</button>
+    </div>
+  </div>
+</div>
+
 <div id="ip-popup" class="hidden">
   <div class="ip-popup-icon">☀</div>
   <div class="ip-popup-title">Server IP Copied!</div>
