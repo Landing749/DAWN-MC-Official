@@ -484,6 +484,8 @@ footer::before{content:'';position:absolute;bottom:0;left:0;right:0;height:200px
 .purchase-type-gift{color:#C084FC}
 .purchase-type-personal{color:var(--text-secondary)}
 .purchase-pending-count{background:rgba(255,107,53,.2);border:1px solid rgba(255,107,53,.4);color:var(--dawn-orange);padding:4px 12px;border-radius:999px;font-size:.75rem;font-weight:700;font-family:var(--fm)}
+
+.purchase-control-no{font-family:var(--fm);font-size:.8rem;font-weight:700;color:var(--dawn-orange);letter-spacing:.04em}
 </style>
 </head>
 <body class="admin-body">
@@ -525,6 +527,7 @@ footer::before{content:'';position:absolute;bottom:0;left:0;right:0;height:200px
       <li><a href="#" class="admin-nav-link" data-panel="staff-panel"><span>👥</span> Staff</a></li>
       <li><a href="#" class="admin-nav-link" data-panel="ranks-panel"><span>⭐</span> Ranks</a></li>
       <li><a href="#" class="admin-nav-link" data-panel="purchases-panel"><span>🧾</span> Purchases</a></li>
+      <li><a href="#" class="admin-nav-link" data-panel="paymethods-panel"><span>💳</span> Pay Methods</a></li>
     </ul>
     <div class="admin-sidebar-footer">
       <a href="index.html" class="btn btn-ghost" style="width:100%;justify-content:center;">← Back to Site</a>
@@ -606,7 +609,13 @@ footer::before{content:'';position:absolute;bottom:0;left:0;right:0;height:200px
         <button class="purchase-filter-tab" data-filter="pending">⏳ Pending</button>
         <button class="purchase-filter-tab" data-filter="fulfilled">✓ Fulfilled</button>
       </div>
-      <div class="table-wrap"><table class="admin-table"><thead><tr><th>Item</th><th>Price</th><th>Username</th><th>Type</th><th>Recipient</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="purchases-tbody"></tbody></table></div>
+      <div class="table-wrap"><table class="admin-table"><thead><tr><th>Control No.</th><th>Item</th><th>Price</th><th>Username</th><th>Type</th><th>Recipient</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="purchases-tbody"></tbody></table></div>
+    </div>
+
+    <!-- Payment Methods -->
+    <div id="paymethods-panel" class="admin-panel hidden">
+      <div class="admin-panel-header"><h2 class="admin-panel-title">💳 Payment Methods</h2><button class="btn btn-primary" id="paym-new-btn">+ New</button></div>
+      <div class="table-wrap"><table class="admin-table"><thead><tr><th>Method</th><th>Account Name</th><th>Account Number</th><th>Instructions</th><th>Actions</th></tr></thead><tbody id="paymethods-tbody"></tbody></table></div>
     </div>
 
   </main>
@@ -724,6 +733,20 @@ footer::before{content:'';position:absolute;bottom:0;left:0;right:0;height:200px
     <div class="form-group"><label class="form-label">Permissions / Perks</label><textarea class="form-input" id="rank-perms" maxlength="1000" rows="4"></textarea></div>
     <div class="form-group"><label class="form-label">Icon</label><div class="upload-area" id="rank-upload-area"><div class="upload-label">Click to upload (PNG/JPG/WEBP · max 5MB)</div><img class="upload-preview hidden" id="rank-img-preview" alt="" /></div><input type="file" class="hidden" id="rank-img-file" accept="image/png,image/jpeg,image/webp" /><input type="hidden" id="rank-img-url" /></div>
     <div class="modal-actions"><button class="btn btn-ghost" data-modal-close="rank-modal">Cancel</button><button class="btn btn-primary" id="rank-save-btn">Save</button></div>
+  </div>
+</div>
+
+
+<!-- Payment Method Modal -->
+<div class="modal-overlay hidden" id="paym-modal">
+  <div class="modal">
+    <div class="modal-title" id="paym-modal-title">New Payment Method</div>
+    <input type="hidden" id="paym-key" />
+    <div class="form-group"><label class="form-label">Method Name</label><input type="text" class="form-input" id="paym-method" maxlength="60" placeholder="GCash, PayMaya, Bank Transfer…" /></div>
+    <div class="form-group"><label class="form-label">Account Name</label><input type="text" class="form-input" id="paym-accname" maxlength="80" placeholder="Juan Dela Cruz" /></div>
+    <div class="form-group"><label class="form-label">Account Number / Details</label><input type="text" class="form-input" id="paym-accno" maxlength="60" placeholder="09XX XXX XXXX" /></div>
+    <div class="form-group"><label class="form-label">Instructions <span class="field-limit">(max 300)</span></label><textarea class="form-input" id="paym-instructions" maxlength="300" rows="3" placeholder="Send exact amount. Include your Control Number as reference."></textarea></div>
+    <div class="modal-actions"><button class="btn btn-ghost" data-modal-close="paym-modal">Cancel</button><button class="btn btn-primary" id="paym-save-btn">Save</button></div>
   </div>
 </div>
 
