@@ -189,7 +189,7 @@ function deleteEntry(path,key){
    LISTENERS + TABLE RENDERS
 ══════════════════════════════════════════════ */
 function listenAll(){
-  listenAnn();listenPatch();listenEvents();listenRoadmap();listenLb();listenStore();listenStaff();listenRanks();
+  listenAnn();listenPatch();listenEvents();listenRoadmap();listenLb();listenStore();listenStaff();listenRanks();listenPurchases();
 }
 
 /* ── ANNOUNCEMENTS ── */
@@ -508,6 +508,84 @@ document.addEventListener('DOMContentLoaded',()=>{
   initNewButtons();
   initSaves();
   initLbAdminTabs();
+  initPurchasesPanel();
   if(typeof firebase!=='undefined')initFirebase();
   else window.addEventListener('load',()=>{if(typeof firebase!=='undefined')initFirebase();else toast('Firebase failed to load.','error');});
 });
+
+/* ══════════════════════════════════════════════
+   PURCHASES
+══════════════════════════════════════════════ */
+let _allPurchases={};
+let _purchaseFilter='all';
+
+function listenPurchases(){
+  db.ref('purchases').on('value',snap=>{
+    _allPurchases=snap.val()||{};
+    renderPurchasesTable();
+    updatePurchaseBadge();
+  });
+}
+
+function updatePurchaseBadge(){
+  const pending=Object.values(_allPurchases).filter(p=>p.status==='pending').length;
+  const badge=document.getElementById('purchase-pending-count');
+  if(!badge)return;
+  if(pending>0){badge.textContent=pending+' pending';badge.classList.remove('hidden');}
+  else{badge.classList.add('hidden');}
+}
+
+function renderPurchasesTable(){
+  const tbody=document.getElementById('purchases-tbody');
+  if(!tbody)return;
+  tbody.textContent='';
+  let entries=Object.entries(_allPurchases);
+  if(_purchaseFilter!=='all')entries=entries.filter(([,p])=>p.status===_purchaseFilter);
+  entries.sort((a,b)=>new Date(b[1].timestamp)-new Date(a[1].timestamp));
+  if(!entries.length){tbody.appendChild(emptyRow(8));return;}
+  entries.forEach(([key,p])=>{
+    const statusBadge=mk('span','purchase-status-'+san(p.status||'pending'),p.status==='fulfilled'?'✓ Fulfilled':'⏳ Pending');
+    const typeEl=mk('span','purchase-type-'+san(p.type||'personal'),p.type==='gift'?'🎁 Gift':'👤 Personal');
+    const date=p.timestamp?new Date(p.timestamp).toLocaleString():'—';
+    const fulfillBtn=p.status!=='fulfilled'?editBtn('✓ Fulfill',()=>fulfillPurchase(key)):null;
+    const actions=[fulfillBtn,delBtn(()=>deleteEntry('purchases',key))].filter(Boolean);
+    tbody.appendChild(makeRow([
+      san(p.item||'—'),
+      san(p.price||'—'),
+      san(p.username||'—'),
+      typeEl,
+      san(p.recipient||'—'),
+      san(date),
+      statusBadge
+    ],actions));
+  });
+}
+
+function fulfillPurchase(key){
+  if(!requireAuth())return;
+  db.ref('purchases/'+key+'/status').set('fulfilled')
+    .then(()=>toast('Marked as fulfilled!','success'))
+    .catch(e=>toast(san(e.message),'error'));
+}
+
+function initPurchasesPanel(){
+  const tabs=document.querySelectorAll('.purchase-filter-tab');
+  tabs.forEach(tab=>{
+    tab.addEventListener('click',()=>{
+      tabs.forEach(t=>t.classList.remove('active'));
+      tab.classList.add('active');
+      _purchaseFilter=tab.dataset.filter||'all';
+      renderPurchasesTable();
+    });
+  });
+  const refreshBtn=document.getElementById('purchases-refresh-btn');
+  if(refreshBtn)refreshBtn.addEventListener('click',()=>{
+    if(!requireAuth())return;
+    db.ref('purchases').once('value',snap=>{
+      _allPurchases=snap.val()||{};
+      renderPurchasesTable();
+      updatePurchaseBadge();
+      toast('Purchases refreshed.','success');
+    });
+  });
+}
