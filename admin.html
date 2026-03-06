@@ -472,6 +472,18 @@ footer::before{content:'';position:absolute;bottom:0;left:0;right:0;height:200px
   .admin-main{padding:20px}
 }
 
+
+/* ════════════════════════════════════════
+   ADMIN — PURCHASES
+════════════════════════════════════════ */
+.purchase-filter-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.purchase-filter-tab{padding:6px 16px;border-radius:var(--rsm);font-family:var(--fd);font-size:.72rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:var(--text-muted);cursor:pointer;transition:all var(--tf)}
+.purchase-filter-tab.active,.purchase-filter-tab:hover{background:rgba(255,107,53,.1);border-color:rgba(255,107,53,.3);color:var(--dawn-gold)}
+.purchase-status-pending{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:rgba(255,179,71,.15);border:1px solid rgba(255,179,71,.3);color:var(--dawn-gold)}
+.purchase-status-fulfilled{display:inline-block;padding:3px 10px;border-radius:999px;font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.25);color:#4ADE80}
+.purchase-type-gift{color:#C084FC}
+.purchase-type-personal{color:var(--text-secondary)}
+.purchase-pending-count{background:rgba(255,107,53,.2);border:1px solid rgba(255,107,53,.4);color:var(--dawn-orange);padding:4px 12px;border-radius:999px;font-size:.75rem;font-weight:700;font-family:var(--fm)}
 </style>
 </head>
 <body class="admin-body">
@@ -512,6 +524,7 @@ footer::before{content:'';position:absolute;bottom:0;left:0;right:0;height:200px
       <li><a href="#" class="admin-nav-link" data-panel="store-panel"><span>🛒</span> Store</a></li>
       <li><a href="#" class="admin-nav-link" data-panel="staff-panel"><span>👥</span> Staff</a></li>
       <li><a href="#" class="admin-nav-link" data-panel="ranks-panel"><span>⭐</span> Ranks</a></li>
+      <li><a href="#" class="admin-nav-link" data-panel="purchases-panel"><span>🧾</span> Purchases</a></li>
     </ul>
     <div class="admin-sidebar-footer">
       <a href="index.html" class="btn btn-ghost" style="width:100%;justify-content:center;">← Back to Site</a>
@@ -577,6 +590,23 @@ footer::before{content:'';position:absolute;bottom:0;left:0;right:0;height:200px
     <div id="ranks-panel" class="admin-panel hidden">
       <div class="admin-panel-header"><h2 class="admin-panel-title">⭐ Ranks</h2><button class="btn btn-primary" id="rank-new-btn">+ New</button></div>
       <div class="table-wrap"><table class="admin-table"><thead><tr><th>Icon</th><th>Name</th><th>Price</th><th>Perks</th><th>Actions</th></tr></thead><tbody id="ranks-tbody"></tbody></table></div>
+    </div>
+
+    <!-- Purchases -->
+    <div id="purchases-panel" class="admin-panel hidden">
+      <div class="admin-panel-header">
+        <h2 class="admin-panel-title">🧾 Purchase Orders</h2>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span class="purchase-pending-count hidden" id="purchase-pending-count"></span>
+          <button class="btn btn-ghost btn-sm" id="purchases-refresh-btn">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="purchase-filter-tabs" id="purchase-filter-tabs">
+        <button class="purchase-filter-tab active" data-filter="all">All</button>
+        <button class="purchase-filter-tab" data-filter="pending">⏳ Pending</button>
+        <button class="purchase-filter-tab" data-filter="fulfilled">✓ Fulfilled</button>
+      </div>
+      <div class="table-wrap"><table class="admin-table"><thead><tr><th>Item</th><th>Price</th><th>Username</th><th>Type</th><th>Recipient</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead><tbody id="purchases-tbody"></tbody></table></div>
     </div>
 
   </main>
