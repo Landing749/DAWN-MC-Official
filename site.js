@@ -386,7 +386,7 @@ function renderAnnouncements(items){
     const card=mk('div','announcement-card');
     card.style.animationDelay=(i*.07)+'s';
     if(ann.image&&safeImg(ann.image)){
-      const img=mkImg(ann.image,'',ann-image);
+      const img=mkImg(ann.image,'','ann-image');
       img.className='ann-image';
       img.addEventListener('error',()=>img.remove());
       card.appendChild(img);
@@ -730,6 +730,7 @@ function renderStore(cat){
     footer.appendChild(mk('div','store-card-price',san(it.price)));
     const buy=mk('button','btn btn-primary','Buy');
     buy.style.padding='8px 18px';buy.style.fontSize='.75rem';
+    buy.addEventListener('click',()=>openBuyModal(it));
     footer.appendChild(buy);
     card.appendChild(footer);
     grid.appendChild(card);
@@ -871,6 +872,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   initNavbar();
   initJoinButtons();
   initStoreTabs();
+  initBuyModal();
   initLbTabs();
   initCalendar();
   initScrollReveal();
@@ -883,3 +885,122 @@ document.addEventListener('DOMContentLoaded',()=>{
     else{showOffline();renderAnnouncements([]);renderPatchPage();renderCalendar();renderRoadmap([]);renderLeaderboard('kills',0);renderStore('all');renderStaff([]);renderRanks([]);}
   });}
 });
+
+/* ══════════════════════════════════════════════
+   BUY MODAL
+══════════════════════════════════════════════ */
+let _buyItem=null;
+let _buyType='personal';
+
+function openBuyModal(item){
+  _buyItem=item;
+  _buyType='personal';
+  // populate item info
+  const nameEl=document.getElementById('buy-item-name');
+  const priceEl=document.getElementById('buy-item-price');
+  if(nameEl)nameEl.textContent=san(item.name);
+  if(priceEl)priceEl.textContent=san(item.price);
+  // reset fields
+  const usernameEl=document.getElementById('buy-username');
+  const recipientEl=document.getElementById('buy-recipient');
+  const giftGroup=document.getElementById('buy-gift-group');
+  const errEl=document.getElementById('buy-error');
+  if(usernameEl)usernameEl.value='';
+  if(recipientEl)recipientEl.value='';
+  if(giftGroup)giftGroup.classList.add('hidden');
+  if(errEl)errEl.classList.add('hidden');
+  // reset type buttons
+  document.querySelectorAll('.buy-type-btn').forEach(b=>{
+    b.classList.toggle('active',b.dataset.type==='personal');
+  });
+  // show modal
+  const modal=document.getElementById('buy-modal');
+  if(modal)modal.classList.remove('hidden');
+}
+
+function closeBuyModal(){
+  const modal=document.getElementById('buy-modal');
+  if(modal)modal.classList.add('hidden');
+  _buyItem=null;
+}
+
+function submitPurchase(){
+  if(!_buyItem)return;
+  const usernameEl=document.getElementById('buy-username');
+  const recipientEl=document.getElementById('buy-recipient');
+  const errEl=document.getElementById('buy-error');
+  const username=usernameEl?usernameEl.value.trim():'';
+  const recipient=recipientEl?recipientEl.value.trim():'';
+
+  // validate
+  if(!username){
+    if(errEl){errEl.textContent='Please enter your Minecraft username.';errEl.classList.remove('hidden');}
+    return;
+  }
+  if(!/^[a-zA-Z0-9_]{2,40}$/.test(username)){
+    if(errEl){errEl.textContent='Username must be 2-40 characters (letters, numbers, underscores).';errEl.classList.remove('hidden');}
+    return;
+  }
+  if(_buyType==='gift'){
+    if(!recipient){
+      if(errEl){errEl.textContent='Please enter the recipient\'s Minecraft username.';errEl.classList.remove('hidden');}
+      return;
+    }
+    if(!/^[a-zA-Z0-9_]{2,40}$/.test(recipient)){
+      if(errEl){errEl.textContent='Recipient username must be 2-40 characters (letters, numbers, underscores).';errEl.classList.remove('hidden');}
+      return;
+    }
+  }
+  if(errEl)errEl.classList.add('hidden');
+
+  // write to firebase
+  if(!db){
+    toast('Store unavailable right now. Try again shortly.','error');
+    return;
+  }
+  const submitBtn=document.getElementById('buy-submit-btn');
+  if(submitBtn){submitBtn.disabled=true;submitBtn.textContent='Submitting...';}
+
+  const payload={
+    item:san(_buyItem.name),
+    price:san(_buyItem.price),
+    category:san(_buyItem.category||''),
+    username:san(username),
+    type:_buyType,
+    recipient:_buyType==='gift'?san(recipient):'',
+    timestamp:new Date().toISOString(),
+    status:'pending'
+  };
+
+  db.ref('purchases').push(payload)
+    .then(()=>{
+      closeBuyModal();
+      toast('Order submitted! Our team will process it shortly.','success');
+    })
+    .catch(e=>{
+      if(errEl){errEl.textContent='Submission failed: '+san(e.message);errEl.classList.remove('hidden');}
+    })
+    .finally(()=>{
+      if(submitBtn){submitBtn.disabled=false;submitBtn.textContent='⚡ Confirm Purchase';}
+    });
+}
+
+function initBuyModal(){
+  const cancelBtn=document.getElementById('buy-cancel-btn');
+  const submitBtn=document.getElementById('buy-submit-btn');
+  const overlay=document.getElementById('buy-modal');
+
+  if(cancelBtn)cancelBtn.addEventListener('click',closeBuyModal);
+  if(submitBtn)submitBtn.addEventListener('click',submitPurchase);
+  if(overlay)overlay.addEventListener('click',e=>{if(e.target===overlay)closeBuyModal();});
+
+  // type toggle
+  document.querySelectorAll('.buy-type-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      _buyType=btn.dataset.type;
+      document.querySelectorAll('.buy-type-btn').forEach(b=>b.classList.toggle('active',b===btn));
+      const giftGroup=document.getElementById('buy-gift-group');
+      if(giftGroup)giftGroup.classList.toggle('hidden',_buyType!=='gift');
+    });
+  });
+}
