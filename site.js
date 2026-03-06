@@ -924,6 +924,119 @@ function closeBuyModal(){
   _buyItem=null;
 }
 
+/* ── CONTROL NO. GENERATOR ── */
+function genControlNo(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let s='DAWN-';
+  for(let i=0;i<4;i++)s+=chars[Math.floor(Math.random()*chars.length)];
+  s+='-';
+  for(let i=0;i<4;i++)s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+
+/* ── RECEIPT PDF ── */
+function downloadReceipt(order){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a5',orientation:'portrait'});
+  const W=148,H=210;
+  // background
+  doc.setFillColor(4,4,15);
+  doc.rect(0,0,W,H,'F');
+  // top accent bar
+  doc.setFillColor(255,107,53);
+  doc.rect(0,0,W,3,'F');
+  // header glow band
+  doc.setFillColor(26,10,46);
+  doc.rect(0,3,W,38,'F');
+  // logo text
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(22);
+  doc.setTextColor(255,179,71);
+  doc.text('DAWNMC',W/2,20,{align:'center'});
+  // tagline
+  doc.setFontSize(7);
+  doc.setTextColor(168,152,128);
+  doc.text('Anarchy  •  RPG  •  Survival',W/2,27,{align:'center'});
+  // receipt label
+  doc.setFontSize(9);
+  doc.setTextColor(255,107,53);
+  doc.text('PURCHASE RECEIPT',W/2,35,{align:'center'});
+  // divider
+  doc.setDrawColor(255,107,53);
+  doc.setLineWidth(0.3);
+  doc.setLineDash([2,2]);
+  doc.line(12,43,W-12,43);
+  doc.setLineDash([]);
+  // control no. box
+  doc.setFillColor(255,107,53,0.12);
+  doc.setFillColor(30,15,50);
+  doc.roundedRect(20,47,W-40,16,3,3,'F');
+  doc.setDrawColor(255,107,53);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(20,47,W-40,16,3,3,'S');
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(7);
+  doc.setTextColor(255,107,53);
+  doc.text('CONTROL NUMBER',W/2,53,{align:'center'});
+  doc.setFontSize(13);
+  doc.setTextColor(255,179,71);
+  doc.text(order.controlNo,W/2,61,{align:'center'});
+  // order details section
+  const rows=[
+    ['Item',order.item],
+    ['Price',order.price],
+    ['Username',order.username],
+    ['Type',order.type==='gift'?'Gift':'Personal'],
+    order.type==='gift'?['Recipient',order.recipient]:null,
+    ['Date',new Date(order.timestamp).toLocaleString()],
+    ['Status','PENDING — Awaiting Payment'],
+  ].filter(Boolean);
+  let y=74;
+  doc.setFont('helvetica','normal');
+  rows.forEach(([label,val])=>{
+    doc.setFontSize(7);
+    doc.setTextColor(107,94,80);
+    doc.text(label.toUpperCase(),14,y);
+    doc.setFontSize(8.5);
+    doc.setTextColor(240,234,214);
+    doc.text(String(val||'—'),14,y+5);
+    doc.setDrawColor(255,107,53);
+    doc.setLineWidth(0.1);
+    doc.setLineDash([1,2]);
+    doc.line(14,y+8,W-14,y+8);
+    doc.setLineDash([]);
+    y+=14;
+  });
+  // how to pay box
+  const boxY=y+4;
+  doc.setFillColor(13,13,43);
+  doc.setDrawColor(255,179,71);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(10,boxY,W-20,30,3,3,'FD');
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(7);
+  doc.setTextColor(255,179,71);
+  doc.text('HOW TO COMPLETE YOUR PURCHASE',W/2,boxY+6,{align:'center'});
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(7);
+  doc.setTextColor(168,152,128);
+  doc.text('1. Note your Control Number above.',14,boxY+12);
+  doc.text('2. Visit  dawnmc.dpdns.org/refcheck.html  to see payment options.',14,boxY+18);
+  doc.text('3. Send payment and include your Control Number as reference.',14,boxY+24);
+  // footer
+  doc.setDrawColor(255,107,53);
+  doc.setLineWidth(0.3);
+  doc.line(10,H-16,W-10,H-16);
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(107,94,80);
+  doc.text('© 2025 DawnMC Network  |  dawnmc.dpdns.org  |  Not affiliated with Mojang Studios',W/2,H-10,{align:'center'});
+  // bottom bar
+  doc.setFillColor(255,107,53);
+  doc.rect(0,H-4,W,4,'F');
+  doc.save('DawnMC-Receipt-'+order.controlNo+'.pdf');
+}
+
 function submitPurchase(){
   if(!_buyItem)return;
   const usernameEl=document.getElementById('buy-username');
@@ -932,7 +1045,6 @@ function submitPurchase(){
   const username=usernameEl?usernameEl.value.trim():'';
   const recipient=recipientEl?recipientEl.value.trim():'';
 
-  // validate
   if(!username){
     if(errEl){errEl.textContent='Please enter your Minecraft username.';errEl.classList.remove('hidden');}
     return;
@@ -943,7 +1055,7 @@ function submitPurchase(){
   }
   if(_buyType==='gift'){
     if(!recipient){
-      if(errEl){errEl.textContent='Please enter the recipient\'s Minecraft username.';errEl.classList.remove('hidden');}
+      if(errEl){errEl.textContent="Please enter the recipient's Minecraft username.";errEl.classList.remove('hidden');}
       return;
     }
     if(!/^[a-zA-Z0-9_]{2,40}$/.test(recipient)){
@@ -953,15 +1065,13 @@ function submitPurchase(){
   }
   if(errEl)errEl.classList.add('hidden');
 
-  // write to firebase
-  if(!db){
-    toast('Store unavailable right now. Try again shortly.','error');
-    return;
-  }
+  if(!db){toast('Store unavailable right now.','error');return;}
   const submitBtn=document.getElementById('buy-submit-btn');
   if(submitBtn){submitBtn.disabled=true;submitBtn.textContent='Submitting...';}
 
+  const controlNo=genControlNo();
   const payload={
+    controlNo,
     item:san(_buyItem.name),
     price:san(_buyItem.price),
     category:san(_buyItem.category||''),
@@ -975,7 +1085,8 @@ function submitPurchase(){
   db.ref('purchases').push(payload)
     .then(()=>{
       closeBuyModal();
-      toast('Order submitted! Our team will process it shortly.','success');
+      downloadReceipt(payload);
+      toast('Order submitted! Receipt downloaded.','success');
     })
     .catch(e=>{
       if(errEl){errEl.textContent='Submission failed: '+san(e.message);errEl.classList.remove('hidden');}
