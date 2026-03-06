@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DawnMC — Order Status & Payment</title>
+  <meta name="description" content="Check your DawnMC purchase order status and find payment details." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <style>
+/* ══════════════════════════════════════════
+   BASE / TOKENS
+══════════════════════════════════════════ */
+:root{
+  --dawn-orange:#FF6B35;--dawn-gold:#FFB347;--dawn-amber:#FF8C00;
+  --violet-deep:#1A0A2E;--violet-mid:#2D1B69;--violet-accent:#7B2FBE;
+  --navy-darkest:#04040F;--navy-dark:#080818;--navy-mid:#0D0D2B;--navy-light:#141440;
+  --glass-bg:rgba(13,13,43,.6);--glass-border:rgba(255,107,53,.15);--glass-border-h:rgba(255,107,53,.45);
+  --text-primary:#F0EAD6;--text-secondary:#A89880;--text-muted:#6B5E50;
+  --glow-o:0 0 20px rgba(255,107,53,.4),0 0 60px rgba(255,107,53,.15);
+  --tf:.15s ease;--tm:.3s ease;
+  --fd:'Cinzel',serif;--fb:'Rajdhani',sans-serif;--fm:'JetBrains Mono',monospace;
+  --rsm:6px;--rmd:12px;--rlg:20px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--navy-darkest);color:var(--text-primary);font-family:var(--fb);font-size:1rem;line-height:1.6;overflow-x:hidden;min-height:100vh}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;font-family:var(--fb);border:none;outline:none;background:none}
+input,textarea,select{font-family:var(--fb)}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--navy-dark)}::-webkit-scrollbar-thumb{background:var(--dawn-orange);border-radius:3px}
+.hidden{display:none!important}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;border-radius:var(--rsm);font-family:var(--fd);font-size:.85rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;transition:all var(--tm);position:relative;overflow:hidden}
+.btn-primary{background:linear-gradient(135deg,var(--dawn-amber),var(--dawn-orange));color:#fff;box-shadow:0 4px 20px rgba(255,107,53,.35)}
+.btn-primary:hover{box-shadow:0 8px 40px rgba(255,107,53,.6);transform:translateY(-2px)}
+.btn-ghost{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:var(--text-secondary)}
+.btn-ghost:hover{background:rgba(255,255,255,.1);color:var(--text-primary)}
+.form-input{width:100%;padding:12px 16px;background:rgba(255,255,255,.04);border:1px solid var(--glass-border);border-radius:var(--rsm);color:var(--text-primary);font-size:.95rem;transition:border-color var(--tf);outline:none}
+.form-input:focus{border-color:var(--dawn-orange);background:rgba(255,107,53,.04)}
+.form-input::placeholder{color:var(--text-muted)}
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,179,71,.3);border-top-color:var(--dawn-gold);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ══════════════════════════════════════════
+   NAVBAR
+══════════════════════════════════════════ */
+#navbar{position:sticky;top:0;z-index:100;padding:16px 0;background:rgba(4,4,15,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--glass-border)}
+.nav-inner{max-width:1000px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{display:flex;align-items:center;gap:10px}
+.nav-logo-text{font-family:var(--fd);font-size:1.2rem;font-weight:900;letter-spacing:.1em;background:linear-gradient(135deg,var(--dawn-gold),var(--dawn-orange));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.nav-back{font-family:var(--fd);font-size:.75rem;letter-spacing:.1em;color:var(--text-muted);transition:color var(--tf)}
+.nav-back:hover{color:var(--dawn-gold)}
+
+/* ══════════════════════════════════════════
+   PAGE HERO
+══════════════════════════════════════════ */
+.page-hero{padding:60px 24px 40px;text-align:center;position:relative;overflow:hidden}
+.page-hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 50% 0%,rgba(123,47,190,.18) 0%,transparent 70%);pointer-events:none}
+.page-hero-eyebrow{font-family:var(--fm);font-size:.7rem;letter-spacing:.4em;color:var(--dawn-orange);text-transform:uppercase;margin-bottom:12px}
+.page-hero-title{font-family:var(--fd);font-size:clamp(1.8rem,5vw,3rem);font-weight:900;letter-spacing:.06em;background:linear-gradient(135deg,#fff 0%,var(--dawn-gold) 40%,var(--dawn-orange) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+.page-hero-sub{color:var(--text-secondary);font-size:1rem;max-width:500px;margin:0 auto}
+
+/* ══════════════════════════════════════════
+   MAIN CONTAINER
+══════════════════════════════════════════ */
+.page-wrap{max-width:900px;margin:0 auto;padding:0 24px 80px}
+
+/* ══════════════════════════════════════════
+   ORDER LOOKUP CARD
+══════════════════════════════════════════ */
+.lookup-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--rlg);padding:36px;margin-bottom:40px}
+.lookup-title{font-family:var(--fd);font-size:1.1rem;font-weight:700;color:var(--dawn-gold);margin-bottom:6px;letter-spacing:.06em}
+.lookup-sub{color:var(--text-muted);font-size:.88rem;margin-bottom:24px}
+.lookup-row{display:flex;gap:12px;align-items:stretch}
+.lookup-row .form-input{flex:1;font-family:var(--fm);letter-spacing:.08em;text-transform:uppercase;font-size:.95rem}
+.lookup-btn{padding:12px 24px;white-space:nowrap;flex-shrink:0}
+.lookup-error{margin-top:12px;padding:10px 14px;background:rgba(252,129,129,.08);border:1px solid rgba(252,129,129,.2);border-radius:var(--rsm);color:#FC8181;font-size:.85rem}
+.lookup-loading{display:flex;align-items:center;gap:10px;margin-top:16px;color:var(--text-muted);font-size:.88rem}
+
+/* ══════════════════════════════════════════
+   ORDER RESULT CARD
+══════════════════════════════════════════ */
+.order-result{background:var(--navy-mid);border:1px solid var(--glass-border-h);border-radius:var(--rlg);overflow:hidden;margin-bottom:40px;animation:slideUp .4s ease both}
+@keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.order-result-header{padding:20px 28px;background:linear-gradient(90deg,rgba(255,107,53,.08),rgba(123,47,190,.06));border-bottom:1px solid var(--glass-border);display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.order-result-control{font-family:var(--fm);font-size:1.2rem;font-weight:700;color:var(--dawn-orange);letter-spacing:.08em}
+.order-status-badge{display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:999px;font-family:var(--fd);font-size:.75rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.order-status-badge.pending{background:rgba(255,179,71,.15);border:1px solid rgba(255,179,71,.3);color:var(--dawn-gold)}
+.order-status-badge.fulfilled{background:rgba(74,222,128,.12);border:1px solid rgba(74,222,128,.3);color:#4ADE80}
+.order-result-body{padding:28px}
+.order-fields{display:grid;grid-template-columns:1fr 1fr;gap:20px 32px}
+.order-field-label{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:3px}
+.order-field-val{font-size:.95rem;color:var(--text-primary);font-weight:500}
+.order-field-val.mono{font-family:var(--fm)}
+.order-note{margin-top:24px;padding:14px 18px;background:rgba(255,107,53,.06);border:1px solid rgba(255,107,53,.15);border-radius:var(--rsm);font-size:.85rem;color:var(--text-secondary);line-height:1.6}
+.order-fulfilled-banner{margin-top:20px;padding:14px 18px;background:rgba(74,222,128,.08);border:1px solid rgba(74,222,128,.2);border-radius:var(--rsm);font-size:.9rem;color:#4ADE80;display:flex;align-items:center;gap:8px;font-family:var(--fd);font-weight:700;letter-spacing:.05em}
+@media(max-width:600px){.order-fields{grid-template-columns:1fr}}
+
+/* ══════════════════════════════════════════
+   PAYMENT METHODS SECTION
+══════════════════════════════════════════ */
+.section-heading{display:flex;align-items:center;gap:14px;margin-bottom:24px}
+.section-heading-line{flex:1;height:1px;background:linear-gradient(90deg,rgba(255,107,53,.3),transparent)}
+.section-heading-text{font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--dawn-gold);letter-spacing:.08em;white-space:nowrap}
+.payment-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:40px}
+.payment-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--rmd);padding:24px;transition:all var(--tm);position:relative;overflow:hidden}
+.payment-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--dawn-orange),var(--dawn-gold))}
+.payment-card:hover{border-color:var(--glass-border-h);transform:translateY(-3px);box-shadow:var(--glow-o)}
+.payment-card-method{font-family:var(--fd);font-size:1rem;font-weight:700;color:var(--text-primary);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.payment-card-method-icon{font-size:1.3rem}
+.payment-field{margin-bottom:10px}
+.payment-field-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted);margin-bottom:2px}
+.payment-field-val{font-family:var(--fm);font-size:.9rem;color:var(--dawn-gold);display:flex;align-items:center;gap:8px}
+.copy-btn{background:rgba(255,107,53,.1);border:1px solid rgba(255,107,53,.2);border-radius:4px;color:var(--dawn-orange);font-size:.65rem;padding:2px 6px;cursor:pointer;transition:all var(--tf);font-family:var(--fd);letter-spacing:.06em}
+.copy-btn:hover{background:rgba(255,107,53,.2)}
+.payment-instructions{margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,107,53,.08);font-size:.82rem;color:var(--text-secondary);line-height:1.6}
+.no-payment-methods{text-align:center;padding:40px 20px;color:var(--text-muted);font-size:.9rem}
+
+/* ══════════════════════════════════════════
+   HOW IT WORKS
+══════════════════════════════════════════ */
+.steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:40px}
+.step-card{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--rmd);padding:24px 20px;text-align:center;position:relative}
+.step-num{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--dawn-amber),var(--dawn-orange));display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-family:var(--fd);font-size:.9rem;font-weight:700;color:#fff}
+.step-text{font-size:.88rem;color:var(--text-secondary);line-height:1.6}
+.step-title{font-family:var(--fd);font-size:.85rem;font-weight:700;color:var(--text-primary);margin-bottom:6px;letter-spacing:.04em}
+
+/* ══════════════════════════════════════════
+   FOOTER
+══════════════════════════════════════════ */
+.page-footer{border-top:1px solid var(--glass-border);padding:24px;text-align:center;color:var(--text-muted);font-size:.75rem}
+.page-footer a{color:var(--dawn-gold);margin:0 8px;transition:opacity var(--tf)}
+.page-footer a:hover{opacity:.75}
+
+/* ══════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════ */
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+.toast{padding:12px 18px;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:var(--rsm);backdrop-filter:blur(20px);font-size:.875rem;color:var(--text-primary);max-width:320px;animation:toastIn .3s ease;pointer-events:all}
+.toast.success{border-color:rgba(74,222,128,.4);background:rgba(74,222,128,.08)}
+.toast.error{border-color:rgba(252,129,129,.4);background:rgba(252,129,129,.08)}
+@keyframes toastIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  </style>
+</head>
+<body>
+
+<!-- ══════ NAVBAR ══════ -->
+<nav id="navbar">
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <span class="nav-logo-text">DawnMC</span>
+    </div>
+    <a href="index.html" class="nav-back">← Back to Site</a>
+  </div>
+</nav>
+
+<!-- ══════ HERO ══════ -->
+<div class="page-hero">
+  <div class="page-hero-eyebrow">☀ DawnMC Store</div>
+  <h1 class="page-hero-title">Order Status & Payment</h1>
+  <p class="page-hero-sub">Enter your Control Number to check your order, or scroll down to see how to pay.</p>
+</div>
+
+<!-- ══════ MAIN ══════ -->
+<div class="page-wrap">
+
+  <!-- ORDER LOOKUP -->
+  <div class="lookup-card">
+    <div class="lookup-title">🔍 Check Your Order</div>
+    <div class="lookup-sub">Enter the Control Number from your receipt (e.g. DAWN-XXXX-XXXX)</div>
+    <div class="lookup-row">
+      <input type="text" class="form-input" id="lookup-input" maxlength="14" placeholder="DAWN-XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" />
+      <button class="btn btn-primary lookup-btn" id="lookup-btn">Check Status</button>
+    </div>
+    <div class="lookup-error hidden" id="lookup-error"></div>
+    <div class="lookup-loading hidden" id="lookup-loading"><span class="spinner"></span> Searching…</div>
+  </div>
+
+  <!-- ORDER RESULT (injected here) -->
+  <div id="order-result-wrap"></div>
+
+  <!-- HOW IT WORKS -->
+  <div class="section-heading">
+    <div class="section-heading-text">📋 How to Complete Your Purchase</div>
+    <div class="section-heading-line"></div>
+  </div>
+  <div class="steps-grid">
+    <div class="step-card">
+      <div class="step-num">1</div>
+      <div class="step-title">Place Your Order</div>
+      <div class="step-text">Click Buy on any item in the DawnMC Store. Fill in your username and get your receipt with a Control Number.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">2</div>
+      <div class="step-title">Send Payment</div>
+      <div class="step-text">Choose a payment method below. Send the exact amount and include your Control Number as the payment reference.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">3</div>
+      <div class="step-title">Get Your Rank</div>
+      <div class="step-text">Our team verifies your payment and applies your rank or item in-game, usually within 24 hours.</div>
+    </div>
+    <div class="step-card">
+      <div class="step-num">4</div>
+      <div class="step-title">Track Your Order</div>
+      <div class="step-text">Use your Control Number above to check if your order has been fulfilled. You'll see ✓ Fulfilled when it's done.</div>
+    </div>
+  </div>
+
+  <!-- PAYMENT METHODS -->
+  <div class="section-heading">
+    <div class="section-heading-text">💳 Payment Methods</div>
+    <div class="section-heading-line"></div>
+  </div>
+  <div class="payment-grid" id="payment-grid">
+    <div class="no-payment-methods"><span class="spinner"></span></div>
+  </div>
+
+</div>
+
+<!-- ══════ FOOTER ══════ -->
+<footer class="page-footer">
+  © 2025 DawnMC Network &nbsp;|&nbsp;
+  <a href="index.html">Home</a>
+  <a href="index.html#store">Store</a>
+  <a href="index.html#discord">Discord</a>
+</footer>
+
+<div id="toast-container"></div>
+
+<script>
+'use strict';
+
+/* ── FRAME BUST ── */
+(function(){if(window.top!==window.self){try{window.top.location=window.self.location;}catch(e){document.documentElement.innerHTML='';}}})();
+
+/* ── DOMAIN GUARD ── */
+(function(){
+  const ok=['dawnmc.dpdns.org','localhost','127.0.0.1'];
+  if(!ok.includes(window.location.hostname)){document.body.innerHTML='<p style="color:#FC8181;font-family:monospace;padding:40px;text-align:center">Unauthorized domain.</p>';throw new Error('Domain not allowed');}
+})();
+
+const FB={
+  apiKey:'AIzaSyAdXd0d_uOwjH6rvpjNAlmzpKUSAf_w9RE',
+  authDomain:'dawn-mc-8a7f9.firebaseapp.com',
+  databaseURL:'https://dawn-mc-8a7f9-default-rtdb.firebaseio.com',
+  projectId:'dawn-mc-8a7f9',
+  storageBucket:'dawn-mc-8a7f9.firebasestorage.app',
+  messagingSenderId:'329783945294',
+  appId:'1:329783945294:web:e8f2cfa515945984a4fb1f'
+};
+let db=null;
+
+function san(v){if(v==null)return'';return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;').trim().slice(0,2000);}
+function mk(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!==undefined)e.textContent=txt;return e;}
+function toast(msg,type){
+  type=type||'success';
+  const c=document.getElementById('toast-container');if(!c)return;
+  const t=mk('div','toast '+type,msg);c.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .4s';setTimeout(()=>t.remove(),400);},3200);
+}
+
+/* ── ORDER LOOKUP ── */
+function lookupOrder(){
+  const input=document.getElementById('lookup-input');
+  const errEl=document.getElementById('lookup-error');
+  const loadEl=document.getElementById('lookup-loading');
+  const resultWrap=document.getElementById('order-result-wrap');
+  const raw=(input?input.value.trim():'').toUpperCase();
+  if(errEl)errEl.classList.add('hidden');
+  if(resultWrap)resultWrap.textContent='';
+
+  // Normalize: allow with or without dashes
+  const cn=raw.replace(/[^A-Z0-9]/g,'');
+  if(cn.length<8||!raw.startsWith('DAWN')){
+    if(errEl){errEl.textContent='Please enter a valid Control Number (e.g. DAWN-XXXX-XXXX).';errEl.classList.remove('hidden');}
+    return;
+  }
+
+  if(!db){if(errEl){errEl.textContent='Database connection unavailable. Try again shortly.';errEl.classList.remove('hidden');}return;}
+  if(loadEl)loadEl.classList.remove('hidden');
+
+  // Search all purchases for matching controlNo
+  db.ref('purchases').orderByChild('controlNo').equalTo(raw).once('value')
+    .then(snap=>{
+      if(loadEl)loadEl.classList.add('hidden');
+      const data=snap.val();
+      if(!data||!Object.keys(data).length){
+        if(errEl){errEl.textContent='No order found with that Control Number. Double-check and try again.';errEl.classList.remove('hidden');}
+        return;
+      }
+      const [,order]=Object.entries(data)[0];
+      renderOrderResult(order);
+    })
+    .catch(e=>{
+      if(loadEl)loadEl.classList.add('hidden');
+      if(errEl){errEl.textContent='Search failed: '+san(e.message);errEl.classList.remove('hidden');}
+    });
+}
+
+function renderOrderResult(order){
+  const wrap=document.getElementById('order-result-wrap');
+  if(!wrap)return;
+  wrap.textContent='';
+  const status=String(order.status||'pending').toLowerCase();
+  const card=mk('div','order-result');
+
+  // header
+  const header=mk('div','order-result-header');
+  const cnEl=mk('div','order-result-control',san(order.controlNo||'—'));
+  const badge=mk('div','order-status-badge '+(status==='fulfilled'?'fulfilled':'pending'),status==='fulfilled'?'✓ Fulfilled':'⏳ Pending — Awaiting Payment');
+  header.appendChild(cnEl);
+  header.appendChild(badge);
+  card.appendChild(header);
+
+  // body
+  const body=mk('div','order-result-body');
+  const fields=mk('div','order-fields');
+
+  const addField=(label,val,mono)=>{
+    const f=mk('div');
+    f.appendChild(mk('div','order-field-label',label));
+    f.appendChild(mk('div','order-field-val'+(mono?' mono':''),val||'—'));
+    fields.appendChild(f);
+  };
+
+  addField('Item',san(order.item));
+  addField('Price',san(order.price),true);
+  addField('Your Username',san(order.username),true);
+  addField('Purchase Type',order.type==='gift'?'🎁 Gift':'👤 Personal');
+  if(order.type==='gift')addField('Recipient',san(order.recipient),true);
+  addField('Order Date',order.timestamp?new Date(order.timestamp).toLocaleString():'—');
+
+  body.appendChild(fields);
+
+  if(status==='pending'){
+    const note=mk('div','order-note');
+    note.textContent='📌 Your order is pending. Please send payment using one of the methods below and include your Control Number as the payment reference. Your rank will be applied within 24 hours of payment verification.';
+    body.appendChild(note);
+  }else{
+    const banner=mk('div','order-fulfilled-banner');
+    banner.textContent='🎉 Your order has been fulfilled! Log in to DawnMC to enjoy your purchase.';
+    body.appendChild(banner);
+  }
+
+  card.appendChild(body);
+  wrap.appendChild(card);
+  wrap.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+/* ── PAYMENT METHODS ── */
+const METHOD_ICONS={'gcash':'📱','paymaya':'📱','maya':'📱','paypal':'🌐','bank':'🏦','bdo':'🏦','bpi':'🏦','unionbank':'🏦','metrobank':'🏦','seabank':'💙','gotyme':'💳','crypto':'🪙','bitcoin':'🪙','usdt':'🪙'};
+
+function getMethodIcon(method){
+  const key=String(method||'').toLowerCase();
+  for(const [k,icon] of Object.entries(METHOD_ICONS)){if(key.includes(k))return icon;}
+  return '💳';
+}
+
+function renderPaymentMethods(data){
+  const grid=document.getElementById('payment-grid');
+  if(!grid)return;
+  grid.textContent='';
+  const entries=Object.values(data||{});
+  if(!entries.length){
+    const empty=mk('div','no-payment-methods');
+    empty.textContent='Payment methods will appear here once configured.';
+    grid.appendChild(empty);
+    return;
+  }
+  entries.forEach(pm=>{
+    const card=mk('div','payment-card');
+    const header=mk('div','payment-card-method');
+    header.appendChild(mk('span','payment-card-method-icon',getMethodIcon(pm.method)));
+    header.appendChild(mk('span',null,san(pm.method)));
+    card.appendChild(header);
+
+    const nameField=mk('div','payment-field');
+    nameField.appendChild(mk('div','payment-field-label','Account Name'));
+    nameField.appendChild(mk('div','payment-field-val',san(pm.accountName)));
+    card.appendChild(nameField);
+
+    const noField=mk('div','payment-field');
+    noField.appendChild(mk('div','payment-field-label','Account Number'));
+    const noValWrap=mk('div','payment-field-val');
+    noValWrap.textContent=san(pm.accountNumber);
+    const copyBtn=mk('button','copy-btn','Copy');
+    copyBtn.addEventListener('click',()=>{
+      navigator.clipboard.writeText(pm.accountNumber||'').then(()=>toast('Copied!','success')).catch(()=>{});
+    });
+    noValWrap.appendChild(copyBtn);
+    noField.appendChild(noValWrap);
+    card.appendChild(noField);
+
+    if(pm.instructions){
+      const inst=mk('div','payment-instructions',san(pm.instructions));
+      card.appendChild(inst);
+    }
+    grid.appendChild(card);
+  });
+}
+
+/* ── INIT ── */
+function initFirebase(){
+  try{
+    firebase.initializeApp(FB);
+    db=firebase.database();
+    // Load payment methods
+    db.ref('paymentMethods').on('value',snap=>renderPaymentMethods(snap.val()||{}));
+  }catch(e){
+    console.error('Firebase init failed:',e);
+    renderPaymentMethods({});
+  }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  const lookupBtn=document.getElementById('lookup-btn');
+  const lookupInput=document.getElementById('lookup-input');
+  if(lookupBtn)lookupBtn.addEventListener('click',lookupOrder);
+  if(lookupInput)lookupInput.addEventListener('keydown',e=>{if(e.key==='Enter')lookupOrder();});
+
+  // Auto-upcase and format input
+  if(lookupInput){
+    lookupInput.addEventListener('input',()=>{
+      const v=lookupInput.value.toUpperCase().replace(/[^A-Z0-9-]/g,'');
+      lookupInput.value=v;
+    });
+  }
+
+  // Check URL param ?cn=DAWN-XXXX-XXXX
+  const params=new URLSearchParams(window.location.search);
+  const cnParam=params.get('cn');
+  if(cnParam&&lookupInput){
+    lookupInput.value=cnParam.toUpperCase();
+  }
+
+  if(typeof firebase!=='undefined')initFirebase();
+  else window.addEventListener('load',()=>{
+    if(typeof firebase!=='undefined')initFirebase();
+    else renderPaymentMethods({});
+  });
+});
+</script>
+</body>
+</html>
