@@ -189,7 +189,7 @@ function deleteEntry(path,key){
    LISTENERS + TABLE RENDERS
 ══════════════════════════════════════════════ */
 function listenAll(){
-  listenAnn();listenPatch();listenEvents();listenRoadmap();listenLb();listenStore();listenStaff();listenRanks();listenPurchases();
+  listenAnn();listenPatch();listenEvents();listenRoadmap();listenLb();listenStore();listenStaff();listenRanks();listenPurchases();listenPaymentMethods();
 }
 
 /* ── ANNOUNCEMENTS ── */
@@ -509,6 +509,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   initSaves();
   initLbAdminTabs();
   initPurchasesPanel();
+  initPaymentMethods();
   if(typeof firebase!=='undefined')initFirebase();
   else window.addEventListener('load',()=>{if(typeof firebase!=='undefined')initFirebase();else toast('Firebase failed to load.','error');});
 });
@@ -547,9 +548,11 @@ function renderPurchasesTable(){
     const statusBadge=mk('span','purchase-status-'+san(p.status||'pending'),p.status==='fulfilled'?'✓ Fulfilled':'⏳ Pending');
     const typeEl=mk('span','purchase-type-'+san(p.type||'personal'),p.type==='gift'?'🎁 Gift':'👤 Personal');
     const date=p.timestamp?new Date(p.timestamp).toLocaleString():'—';
+    const cnEl=mk('span','purchase-control-no',san(p.controlNo||'—'));
     const fulfillBtn=p.status!=='fulfilled'?editBtn('✓ Fulfill',()=>fulfillPurchase(key)):null;
     const actions=[fulfillBtn,delBtn(()=>deleteEntry('purchases',key))].filter(Boolean);
     tbody.appendChild(makeRow([
+      cnEl,
       san(p.item||'—'),
       san(p.price||'—'),
       san(p.username||'—'),
@@ -588,4 +591,54 @@ function initPurchasesPanel(){
       toast('Purchases refreshed.','success');
     });
   });
+}
+
+/* ══════════════════════════════════════════════
+   PAYMENT METHODS
+══════════════════════════════════════════════ */
+function listenPaymentMethods(){
+  db.ref('paymentMethods').on('value',snap=>{
+    renderPaymentMethodsTable(snap.val()||{});
+  });
+}
+
+function renderPaymentMethodsTable(data){
+  const tbody=document.getElementById('paymethods-tbody');
+  if(!tbody)return;
+  tbody.textContent='';
+  const entries=Object.entries(data);
+  if(!entries.length){tbody.appendChild(emptyRow(5));return;}
+  entries.forEach(([key,pm])=>{
+    tbody.appendChild(makeRow([
+      san(pm.method||'—'),
+      san(pm.accountName||'—'),
+      san(pm.accountNumber||'—'),
+      san(pm.instructions||'—')
+    ],[editBtn('Edit',()=>fillPayMethod(key,pm)),delBtn(()=>deleteEntry('paymentMethods',key))]));
+  });
+}
+
+function fillPayMethod(key,pm){
+  setV('paym-key',key);
+  setV('paym-method',pm.method||'');
+  setV('paym-accname',pm.accountName||'');
+  setV('paym-accno',pm.accountNumber||'');
+  setV('paym-instructions',pm.instructions||'');
+  const t=document.getElementById('paym-modal-title');if(t)t.textContent='Edit Payment Method';
+  openModal('paym-modal');
+}
+
+function initPaymentMethods(){
+  const newBtn=document.getElementById('paym-new-btn');
+  if(newBtn)newBtn.addEventListener('click',()=>{
+    const t=document.getElementById('paym-modal-title');if(t)t.textContent='New Payment Method';
+    closeModal('paym-modal');openModal('paym-modal');
+  });
+  wireSave('paym-save-btn','paym-key','paym',k=>k?'paymentMethods/'+k:'paymentMethods',()=>{
+    const mV=validate('Method',getV('paym-method'),60);if(!mV.ok){toast(mV.msg,'error');return null;}
+    const nV=validate('Account Name',getV('paym-accname'),80);if(!nV.ok){toast(nV.msg,'error');return null;}
+    const noV=validate('Account Number',getV('paym-accno'),60);if(!noV.ok){toast(noV.msg,'error');return null;}
+    const iV=validateOpt(getV('paym-instructions'),300);
+    return{method:mV.val,accountName:nV.val,accountNumber:noV.val,instructions:iV.val};
+  },'paym-modal');
 }
