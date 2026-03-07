@@ -300,7 +300,7 @@ function initNavbar(){
    COPY IP
 ══════════════════════════════════════════════ */
 function copyIP(){
-  try{navigator.clipboard.writeText('play.dawnmc.net').catch(()=>{});}catch(e){}
+  try{navigator.clipboard.writeText('play.dawnmc.fun').catch(()=>{});}catch(e){}
   const p=document.getElementById('ip-popup');
   if(p){p.classList.remove('hidden');setTimeout(()=>p.classList.add('hidden'),2200);}
 }
